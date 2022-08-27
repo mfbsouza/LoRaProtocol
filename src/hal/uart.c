@@ -10,7 +10,7 @@ static void (*rx_callback) (void) = NULL;
 /* private functions */
 static void uart_putc();
 static void uart_init(int baudrate);
-static void uart_write(const void *data, int size);
+static void uart_write(const char *data, int size);
 static void uart_rx_callback(void (*callback)());
 static char uart_getc();
 
@@ -73,7 +73,7 @@ void uart_init(int baudrate)
 	BIT_SET(UCSR0B, TXEN0);
 }
 
-void uart_write(const void *data, int size)
+void uart_write(const char *data, int size)
 {
 	unsigned char *dest = NULL;
 	int i;

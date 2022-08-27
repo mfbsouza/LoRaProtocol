@@ -2,13 +2,15 @@
 #include "hal/uart.h"
 #include <util/delay.h>
 
+static const struct serial_ops *serial = NULL;
+
 void on_rx();
 
 int main ()
 {
 	const char *string = "hello uart!\r\nworking nicely!\r\ntry typing: ";
-	const struct serial_ops *serial = uart_driver();
 
+	serial = uart_driver();
 	serial->init(9600);
 	serial->rx_callback(on_rx);
 	serial->write(string, strlen(string));
@@ -24,7 +26,6 @@ int main ()
 
 void on_rx()
 {
-	const struct serial_ops *serial = uart_driver();
 	char c = serial->read_byte();
 	if (c == '\r') {
 		serial->write("\r\n", 2);
