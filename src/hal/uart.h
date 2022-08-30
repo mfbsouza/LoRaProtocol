@@ -1,20 +1,21 @@
 #ifndef __UART_H__
 #define __UART_H__
 
-#include <string.h>
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include "common/bitmask.h"
-#include "interfaces/serial.h"
+#include <stdint.h>
 
-#define UART_BUFFER_SIZE 64
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #define UBRR(BAUD) (F_CPU/16/BAUD-1)
 
-const struct serial_ops* uart_driver();
+void uart_init        (int baudrate);
+void uart_write       (const void *data, int cnt);
+int  uart_available   ();
+char uart_read        ();
+void uart_rx_handler  (void (*handler)());
 
-//void uart_init        (int);
-//void uart_write       (const void *, int);
-//void uart_rx_callback (void (*)());
-//char uart_getc        ();
-
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 #endif /* __UART_H__ */

@@ -1,39 +1,77 @@
-#include "hal/gpio.h"
-#include "hal/uart.h"
+#include <string.h>
 #include <util/delay.h>
+#include "hal/uart.h"
+#include "hal/gpio.h"
+#include "drivers/LoRaMESH/LoRa.h"
 
-static const struct serial_ops *serial = NULL;
+static const SerialInterface_t serial = {
+	.available = uart_available,
+	.init = uart_init,
+	.read = uart_read,
+	.rx_handler = uart_rx_handler,
+	.write = uart_write
+};
 
-void on_rx();
+//void delay_wrapper(double ms)
+//{
+//	_delay_ms(ms);
+//}
+
+//static const TimerInterface_t timer = {
+//	.delay = delay_wrapper
+//};
+
+void int_to_char_uart(const void *data, int cnt)
+{
+	int i;
+	uint8_t c;
+	for (i = 0; i < cnt; i++) {
+		c = ((uint8_t *)data)[i] + '0';
+		serial.write(&c, 1);
+	}
+}
 
 int main ()
 {
-	const char *string = "hello uart!\r\nworking nicely!\r\ntry typing: ";
-
-	serial = uart_driver();
-	serial->init(9600);
-	serial->rx_callback(on_rx);
-	serial->write(string, strlen(string));
+	uint16_t local_id, local_net;
+	uint32_t unique_id;
 
 	gpio_init(GPIO_PB5, OUTPUT);
+	gpio_write(GPIO_PB5, 0);
+	/* give some time to LoRaMESH boot */
+	//timer.delay(2000);
+	_delay_ms(3000);
+
+	serial.init(9600);
+	lora_init(&serial);
+
+	/* read local lora info */
+	if (LocalRead(&local_id, &local_net, &unique_id) != MESH_OK) {
+
+		if (local_net == 3584 || local_net == 14) {
+			gpio_write(GPIO_PB5, 1);
+		}
+
+		//serial.write("Local ID: ", 10);
+		//int_to_char_uart(&local_id, 2);
+		//serial.write("\n", 1);
+
+		//serial.write("Local NET: ", 11);
+		//int_to_char_uart(&local_net, 2);
+		//serial.write("\n", 1);
+
+		//serial.write("Local UID: ", 11);
+		//int_to_char_uart(&unique_id, 4);
+		//serial.write("\n", 1);
+	}
+	else {
+		serial.write("error reading lora", 18);
+	}
 
 	while(1) {
-		gpio_write(GPIO_PB5, !gpio_read(GPIO_PB5));
-		_delay_ms(250);
+		_delay_ms(10);
 	}
+
 	return 0;
 }
 
-void on_rx()
-{
-	char c = serial->read_byte();
-	if (c == '\r') {
-		serial->write("\r\n", 2);
-	}
-	else if (c == 127) {
-		serial->write("\b \b", 3);
-	}
-	else {
-		serial->write(&c, 1);
-	}
-}

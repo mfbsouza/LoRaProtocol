@@ -1,45 +1,15 @@
 #include "uart.h"
+#include <assert.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include "common/bitmask.h"
 
 /* private variables */
-static unsigned char buffer[UART_BUFFER_SIZE];
-static unsigned char head = 0;
-static unsigned char tail = 0;
-static unsigned char count = 0;
-static void (*rx_callback) (void) = NULL;
-
-/* private functions */
-static void uart_putc();
-static void uart_init(int baudrate);
-static void uart_write(const char *data, int size);
-static void uart_rx_callback(void (*callback)());
-static char uart_getc();
-
-/* driver operations */
-static const struct serial_ops s_ops = {
-	.name = "Atmega328p UART",
-	.init = uart_init,
-	.write = uart_write,
-	.read_byte = uart_getc,
-	.rx_callback = uart_rx_callback
-};
-
-const struct serial_ops* uart_driver()
-{
-	return &s_ops;
-}
-
-ISR(USART_TX_vect)
-{
-	if (count != 0) {
-		uart_putc();
-	}
-}
+static void (*rx_handler)() = NULL;
 
 ISR(USART_RX_vect)
 {
-	if (rx_callback != NULL) {
-		rx_callback();
-	}
+	if (rx_handler != NULL) rx_handler();
 }
 
 void uart_init(int baudrate)
@@ -63,8 +33,7 @@ void uart_init(int baudrate)
 	/* stop bit: 1 bit */
 	BIT_CLR(UCSR0C, USBS0);
 	
-	/* interrupt on TX & RX complete flag */
-	BIT_SET(UCSR0B, TXCIE0);
+	/* interrupt on RX complete flag */
 	BIT_SET(UCSR0B, RXCIE0);
 	sei();
 
@@ -73,44 +42,28 @@ void uart_init(int baudrate)
 	BIT_SET(UCSR0B, TXEN0);
 }
 
-void uart_write(const char *data, int size)
+void uart_write(const void *data, int cnt)
 {
-	unsigned char *dest = NULL;
-	int i;
+	assert(data != NULL);
+	int i = 0;
 
-	/* wait until you can store more data in the buffer */
-	while ((count + size) >= UART_BUFFER_SIZE);
-
-	/* cpy data to tx buffer */
-	for (i = 0; i < size; i++) {
-		dest = buffer + head;
-		*dest = *(unsigned char *)(data+i);
-		head = (head + 1) % UART_BUFFER_SIZE;
-	}
-	count += size;
-
-	/* trigger the TX interrupt sending the first char */
-	if (BIT_GET(UCSR0A, UDRE0)) {
-		uart_putc();
+	for (i = 0; i < cnt; i++) {
+		while (!BIT_GET(UCSR0A, UDRE0));
+		UDR0 = ((unsigned char *)data)[i];
 	}
 }
 
-static void uart_putc()
+char uart_read()
 {
-	char c;
-	c = buffer[tail];
-	UDR0 = c;
-	tail = (tail + 1) % UART_BUFFER_SIZE;
-	count--;
+	return UDR0;
 }
 
-char uart_getc()
+int uart_available()
 {
-	char c = UDR0;
-	return c;
+	return (int)BIT_GET(UCSR0A, RXC0);
 }
 
-void uart_rx_callback (void (*callback)())
+void uart_rx_handler(void (*handler)()) 
 {
-	rx_callback = callback;
+	rx_handler = handler;
 }

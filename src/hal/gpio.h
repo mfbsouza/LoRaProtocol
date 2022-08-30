@@ -45,9 +45,16 @@ enum gpio_value {
 
 /* functions */
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 void gpio_init(enum gpio_port, enum gpio_mode);
 void gpio_write(enum gpio_port, enum gpio_value);
 void gpio_flip(enum gpio_port);
 char gpio_read(enum gpio_port);
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 #endif /*__GPIO_H__*/
