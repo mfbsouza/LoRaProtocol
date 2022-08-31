@@ -14,6 +14,7 @@ ISR(USART_RX_vect)
 
 void uart_init(int baudrate)
 {
+	cli();
 	/* setting uart speed */
 	UBRR0L = UBRR(baudrate) & 0xFF;
 	UBRR0H = UBRR(baudrate) >> 8;
@@ -35,11 +36,11 @@ void uart_init(int baudrate)
 	
 	/* interrupt on RX complete flag */
 	BIT_SET(UCSR0B, RXCIE0);
-	sei();
 
 	/* enable transmitter and receiver */
 	BIT_SET(UCSR0B, RXEN0);
 	BIT_SET(UCSR0B, TXEN0);
+	sei();
 }
 
 void uart_write(const void *data, int cnt)

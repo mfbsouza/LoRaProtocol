@@ -1,6 +1,6 @@
 #include <string.h>
-#include <util/delay.h>
 #include "hal/uart.h"
+#include "hal/timer.h"
 #include "hal/gpio.h"
 #include "drivers/LoRaMESH/LoRa.h"
 
@@ -12,14 +12,11 @@ static const SerialInterface_t serial = {
 	.write = uart_write
 };
 
-//void delay_wrapper(double ms)
-//{
-//	_delay_ms(ms);
-//}
-
-//static const TimerInterface_t timer = {
-//	.delay = delay_wrapper
-//};
+static const TimerInterface_t timer = {
+	.init = timer_init,
+	.millis = timer_millis_get,
+	.delay = timer_delay
+};
 
 void int_to_char_uart(const void *data, int cnt)
 {
@@ -39,16 +36,16 @@ int main ()
 	gpio_init(GPIO_PB5, OUTPUT);
 	gpio_write(GPIO_PB5, 0);
 	/* give some time to LoRaMESH boot */
-	//timer.delay(2000);
-	_delay_ms(3000);
+	timer.delay(2000);
 
 	serial.init(9600);
-	lora_init(&serial);
+	timer.init();
+	lora_init(&serial, &timer);
 
 	/* read local lora info */
 	if (LocalRead(&local_id, &local_net, &unique_id) != MESH_OK) {
 
-		if (local_net == 3584 || local_net == 14) {
+		if (local_net == 5376 || local_net == 21) {
 			gpio_write(GPIO_PB5, 1);
 		}
 
@@ -65,11 +62,11 @@ int main ()
 		//serial.write("\n", 1);
 	}
 	else {
-		serial.write("error reading lora", 18);
+		//serial.write("error reading lora", 18);
 	}
 
 	while(1) {
-		_delay_ms(10);
+		timer.delay(10);
 	}
 
 	return 0;

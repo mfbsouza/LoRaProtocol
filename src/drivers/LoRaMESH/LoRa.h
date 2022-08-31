@@ -72,8 +72,7 @@ typedef enum
 /* ----- Public global variables ----- */
 
 /* ----- Public Functions Prototype ----- */
-//void lora_init(const SerialInterface_t* serial, const TimerInterface_t *timer);
-void lora_init(const SerialInterface_t* serial);
+void lora_init(const SerialInterface_t* serial, const TimerInterface_t *timer);
 
 /**
   * @brief Initializes Commands interface and the SoftwareSerial object on given Rx/Tx pins and Baudrate

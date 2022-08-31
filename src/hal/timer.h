@@ -7,6 +7,7 @@ extern "C" {
 
 void          timer_init       ();
 unsigned long timer_millis_get ();
+void          timer_delay      (double ms);
 
 #ifdef __cplusplus
 }

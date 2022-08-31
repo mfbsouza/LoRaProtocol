@@ -25,7 +25,7 @@ typedef struct
 //static SoftwareSerial* hSerialCommand = NULL;
 //static SoftwareSerial* hSerialTransp = NULL;
 static const SerialInterface_t *hSerialCommand = NULL;
-//static const TimerInterface_t *mTimer = NULL;
+static const TimerInterface_t *mTimer = NULL;
 static Frame_Typedef frame;
 static uint16_t deviceId = -1;
 static uint16_t deviceNet = -1;
@@ -115,11 +115,12 @@ MeshStatus_Typedef LocalRemoteRead(uint16_t idIn, uint16_t* idOut, uint16_t* net
 
 /* ----- Public Function Definitions ----- */
 
-//void lora_init(const SerialInterface_t* serial, const TimerInterface_t *timer)
-void lora_init(const SerialInterface_t* serial)
+void lora_init(const SerialInterface_t* serial, const TimerInterface_t *timer)
 {
 	hSerialCommand = serial;
-	//mTimer = timer;
+	mTimer = timer;
+
+	mTimer->init();
 
 	LocalRead(&deviceId, &deviceNet, &deviceUniqueId);
 }
@@ -268,7 +269,7 @@ MeshStatus_Typedef ReceivePacketCommand(uint16_t* id, uint8_t* command, uint8_t*
   if(payload == NULL) return MESH_ERROR;
   if(payloadSize == NULL) return MESH_ERROR;
   if(hSerialCommand == NULL) return MESH_ERROR;
-  //if(mTimer == NULL) return MESH_ERROR;
+  if(mTimer == NULL) return MESH_ERROR;
 
   //if(!hSerialCommand->isListening()) hSerialCommand->listen();
   
@@ -287,7 +288,7 @@ MeshStatus_Typedef ReceivePacketCommand(uint16_t* id, uint8_t* command, uint8_t*
     }
     timeout--;
     //delay(1);
-    //mTimer->delay(1);
+    mTimer->delay(1);
   }
 
   /* In case it didn't get any data */
