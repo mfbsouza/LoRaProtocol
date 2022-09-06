@@ -18,57 +18,83 @@ static const TimerInterface_t timer = {
 	.delay = timer_delay
 };
 
-void int_to_char_uart(const void *data, int cnt)
+//int main()
+//{
+//	unsigned long ref;
+//
+//	/* init led and turn it off */
+//	gpio_init(GPIO_PB5, OUTPUT);
+//	gpio_write(GPIO_PB5, 0);
+//
+//	/* give some time to LoRaMESH boot */
+//	timer.init();
+//	timer.delay(2000);
+//
+//	/* flash led to tell that delay was finished */
+//	gpio_write(GPIO_PB5, 1);
+//
+//	/* turn on the uart driver */
+//	serial.init(9600);
+//
+//	/* initialize the loramesh driver */
+//	lora_init(&serial, &timer);
+//
+//	/* testing set a id to the loramesh */
+//	//timer.delay(1);
+//	//lora_set_id(0);
+//
+//	/* blink every 1 sec in the loop() */
+//	ref = timer.millis();
+//	while(1) {
+//		if (timer.millis() - ref >= 1000) {
+//			gpio_write(GPIO_PB5, !gpio_read(GPIO_PB5));
+//			ref = timer.millis();
+//		}
+//		timer.delay(10);
+//	}
+//
+//	return 0;
+//}
+
+//int main()
+//{
+//	serial.init(9600);
+//	timer.init();
+//
+//	while (1) {
+//		if (serial.available() > 0) {
+//			char c = serial.read();
+//			serial.write(&c, 1);
+//		}
+//		//while ((UCSR0A & (1 << RXC0)) == 0); 
+//		//char c = UDR0;
+//		//serial.write(&c, 1);
+//		//timer.delay(10);
+//	}
+//}
+
+void on_rx()
 {
-	int i;
-	uint8_t c;
-	for (i = 0; i < cnt; i++) {
-		c = ((uint8_t *)data)[i] + '0';
-		serial.write(&c, 1);
-	}
+	char c = serial.read();
+	serial.write(&c, 1);
 }
 
-int main ()
+int main()
 {
-	uint16_t local_id, local_net;
-	uint32_t unique_id;
-
-	gpio_init(GPIO_PB5, OUTPUT);
-	gpio_write(GPIO_PB5, 0);
-	/* give some time to LoRaMESH boot */
+	serial.init(9600);
+	serial.rx_handler(on_rx);
+	timer.init();
 	timer.delay(2000);
 
-	serial.init(9600);
-	timer.init();
-	lora_init(&serial, &timer);
+	unsigned char msg[] = { 0x00, 0x00, 0xE2, 0x00, 0x00, 0x00, 0x15, 0xB8 };
 
-	/* read local lora info */
-	if (LocalRead(&local_id, &local_net, &unique_id) != MESH_OK) {
-
-		if (local_net == 5376 || local_net == 21) {
-			gpio_write(GPIO_PB5, 1);
-		}
-
-		//serial.write("Local ID: ", 10);
-		//int_to_char_uart(&local_id, 2);
-		//serial.write("\n", 1);
-
-		//serial.write("Local NET: ", 11);
-		//int_to_char_uart(&local_net, 2);
-		//serial.write("\n", 1);
-
-		//serial.write("Local UID: ", 11);
-		//int_to_char_uart(&unique_id, 4);
-		//serial.write("\n", 1);
+	serial.write(msg, 8);
+	timer.delay(6000);
+	while (1) {
+		//if (serial.available() > 0) {
+		//	char c = serial.read();
+		//	serial.write(&c, 1);
+		//}
+		timer.delay(100);
 	}
-	else {
-		//serial.write("error reading lora", 18);
-	}
-
-	while(1) {
-		timer.delay(10);
-	}
-
-	return 0;
 }
-

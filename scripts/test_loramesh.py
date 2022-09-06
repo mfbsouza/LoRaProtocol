@@ -21,7 +21,11 @@ def main():
     lora.write(msg)
     sleep(1)
     recv = lora.read_all()
-    print(recv)
+    if recv != b'':
+        for byte in recv:
+            print("0x%02X" % byte, end='')
+            print(' ', end='')
+        print()
 
     # close the serial port
     lora.close()

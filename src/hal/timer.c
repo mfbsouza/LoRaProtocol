@@ -39,6 +39,8 @@ unsigned long timer_millis_get()
 
 void timer_delay(double ms)
 {
+	if(!initialized) return;
+
 	unsigned long ref = timer_millis_get();
 
 	while (ms > 0) {
