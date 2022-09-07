@@ -94,8 +94,10 @@ void loop()
 
 	if (lora_packet_available()) {
 		lora_recv_packet(&recv_id, buffer, &pkt_size);
-		Serial.printf("new data: ");
-		Serial.print(buffer[0], pkt_size);
+		Serial.printf("new data from ID 0x%02X -> ", recv_id);
+		for (int i = 0; i < pkt_size; i++) {
+			Serial.printf("0x%02X ", buffer[i]);
+		}
 		Serial.printf("\r\n");
 	}
 	delay(10);
