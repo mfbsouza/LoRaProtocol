@@ -7,12 +7,12 @@ from time import sleep
 def main():
     if len(sys.argv) < 2:
         print("Error: expected more command line arguments")
-        print("Syntax: %s </dev/serial_port>" %sys.argv[0])
+        print("Syntax: %s </dev/serial_port> <baudrate>" %sys.argv[0])
         exit(1)
 
     try:
         # Open the serial port
-        lora = serial.Serial(sys.argv[1], 9600, timeout=None)
+        lora = serial.Serial(sys.argv[1], sys.argv[2], timeout=None)
 
         while True:
             sleep(1)
