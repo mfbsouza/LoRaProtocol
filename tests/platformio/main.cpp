@@ -65,14 +65,38 @@ void setup()
 
 	/**
 	 * SET ID TEST :
-	 * send LocalRead through TX with PrepareFrameCommand() and SendPacket()
+	 * send 0xCA command through TX with PrepareFrameCommand() and SendPacket()
 	 * recv Data through RX with ReceivePacketCommand()
 	 * */
 	lora_set_id(15);
+	LocalRead(&id, &net, &uid);
+	Serial.printf("ID:  0x%02X\r\nNET: 0x%02X\r\nUID: 0x%X\r\n", id, net, uid);
+
+	/**
+	 * SET NET TEST :
+	 * send 0xCD command through TX with PrepareFrameCommand() and SendPacket()
+	 * recv Data through RX with ReceivePacketCommand()
+	 * */
+	lora_set_net(0x10);
+	LocalRead(&id, &net, &uid);
+	Serial.printf("ID:  0x%02X\r\nNET: 0x%02X\r\nUID: 0x%X\r\n", id, net, uid);
+
+	// master recv test
+	lora_set_id(0);
 	LocalRead(&id, &net, &uid);
 	Serial.printf("ID:  0x%02X\r\nNET: 0x%02X\r\nUID: 0x%X\r\n", id, net, uid);
 }
 
 void loop()
 {
+	static uint8_t recv_id, pkt_size;
+	static uint8_t buffer[MAX_PAYLOAD_SIZE];
+
+	if (lora_packet_available()) {
+		lora_recv_packet(&recv_id, buffer, &pkt_size);
+		Serial.printf("new data: ");
+		Serial.print(buffer[0], pkt_size);
+		Serial.printf("\r\n");
+	}
+	delay(10);
 }

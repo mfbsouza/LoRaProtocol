@@ -136,6 +136,46 @@ void lora_set_id(uint8_t id)
 	LocalRead(&deviceId, &deviceNet, &deviceUniqueId);
 }
 
+void lora_set_net(uint8_t net)
+{
+	uint8_t payload[5];
+	memset(payload, 0, 5);
+	payload[0] = 0x04;
+	payload[1] = net;
+	PrepareFrameCommand(deviceId, 0xCD, payload, 5);
+	SendPacket();
+	mTimer->delay(100);
+	/* update values */
+	LocalRead(&deviceId, &deviceNet, &deviceUniqueId);
+}
+
+void lora_send_packet(uint8_t id, uint8_t *payload, uint8_t size)
+{
+	uint16_t send_id;
+	if (deviceId == 0) { // master
+		send_id = id;
+	}
+	else { // slave
+		send_id = deviceId;
+	}
+	PrepareFrameCommand(send_id, 0x7F, payload, size);
+	SendPacket();
+	mTimer->delay(100); // TODO: maybe not needed
+}
+
+void lora_recv_packet(uint8_t *id, uint8_t *buffer, uint8_t *size)
+{
+	uint16_t recv_id;
+	uint8_t command;
+	ReceivePacketCommand(&recv_id, &command, buffer, size, 1000);
+	*id = (uint8_t)recv_id;
+}
+
+int lora_packet_available()
+{
+	return hSerialCommand->available();
+}
+
 MeshStatus_Typedef PrepareFrameCommand(uint16_t id, uint8_t command, uint8_t *payload, uint8_t payloadSize)
 {
 	if (payload == NULL) return MESH_ERROR;
