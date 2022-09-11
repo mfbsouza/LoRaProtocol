@@ -9,13 +9,31 @@
 extern "C" {
 #endif /* __cplusplus */
 
-enum loractl_mode {
+typedef enum {
 	NONE,
 	GATEWAY,
 	NODE
-};
+} LoRa_Mode_t;
 
-void init_protocol(const LoraInterface_t *lora_driver, const TimerInterface_t *timer, enum loractl_mode op_mode);
+typedef enum {
+	NO_ERROR,
+	ERROR,
+	PROCESSING,
+	NO_RESPONSE,
+	NO_MODE_DEFINED,
+	WRONG_MODE
+} LoRa_Error_t;
+
+LoRa_Error_t init_protocol(
+		uint8_t uid,
+		LoRa_Mode_t op_mode,
+		const LoraInterface_t *lora_driver,
+		const TimerInterface_t *timer
+		);
+
+void lorapcl_fsm();
+LoRa_Error_t lorapcl_status();
+LoRa_Error_t scan_gateways();
 
 #ifdef __cplusplus
 }

@@ -55,7 +55,7 @@ void lora_set_id(uint8_t id);
 
 void lora_set_net(uint8_t net); // TODO: maybe remove
 
-void lora_send_packet(uint8_t *payload, uint8_t size);
+void lora_send_packet(uint8_t id, uint8_t *payload, uint8_t size);
 
 void lora_recv_packet(uint8_t *id, uint8_t *buffer, uint8_t *size);
 
