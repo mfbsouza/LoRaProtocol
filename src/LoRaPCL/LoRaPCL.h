@@ -4,6 +4,9 @@
 #include <stdint.h>
 #include "lora_interface.h"
 #include "timer_interface.h"
+#ifdef DEBUG
+#include "serial_interface.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,23 +20,31 @@ typedef enum {
 
 typedef enum {
 	NO_ERROR,
-	PCL_ERROR,
 	NO_RESPONSE,
 	GATEWAY_FULL,
-	NOT_EXPECTED,
 	NO_MODE_DEFINED,
-	WRONG_MODE
+	DENIED
 } LoRa_Error_t;
 
+#ifndef DEBUG
 LoRa_Error_t lorapcl_init(
 		uint8_t uid,
 		LoRa_Mode_t op_mode,
-		const LoraInterface_t *lora_driver,
+		const LoraInterface_t *lora,
 		const TimerInterface_t *timer
 		);
+#else
+LoRa_Error_t lorapcl_init(
+		uint8_t uid,
+		LoRa_Mode_t op_mode,
+		const LoraInterface_t *lora,
+		const SerialInterface_t *serial,
+		const TimerInterface_t *timer
+		);
+#endif
 
-LoRa_Error_t lorapcl_scan_gateway  (uint8_t *gw_uid, uint8_t *gw_nid);
-LoRa_Error_t lorapcl_connect       (uint8_t gateway_uid, uint8_t gateway_nid);
+LoRa_Error_t lorapcl_scan_gateway  (uint8_t *gateway_uid);
+LoRa_Error_t lorapcl_connect       (uint8_t gateway_uid);
 void         lorapcl_gateway_fsm   ();
 
 #ifdef __cplusplus
