@@ -21,6 +21,7 @@ enum lorapcl_states {
 
 	SEND_GW_ID,
 	CHECK_FREE_NID,
+	SEND_GW_FULL,
 	SEND_SYNC_SET_ID,
 	WAIT_ACK,
 	UPDATE_CLIENT_LIST
@@ -55,7 +56,10 @@ static uint8_t	       unique_id;
 static uint8_t	       net_id;
 static uint8_t	       state = NO_MODE;
 static uint8_t	       mode = NONE;
+// lot of memory
 static Packet_Frame_t  buffer;
+static Packet_Frame_t  data_packages[4];
+static uint8_t         gw_client_list[250];
 
 static const LoraInterface_t  *radio  = NULL;
 static const TimerInterface_t *mTimer = NULL;
@@ -65,6 +69,7 @@ static const SerialInterface_t *debug = NULL;
 
 /* private functions */
 
+static uint8_t        get_free_nid     ();
 static Packet_Type_t  get_packet_type  (Packet_Frame_t *packet);
 static LoRa_Error_t   wait_signal      (Packet_Type_t signal);
 
@@ -72,6 +77,13 @@ static void send_signal(
 		uint8_t dest_uid,
 		uint8_t dest_nid,
 		Packet_Type_t signal
+		);
+
+static void send_packet(
+		uint8_t dest_uid,
+		uint8_t dest_nid,
+		const void *data,
+		uint8_t size
 		);
 
 static void build_signal(
@@ -107,6 +119,7 @@ LoRa_Error_t lorapcl_init(
 	switch (op_mode) {
 	case GATEWAY:
 		net_id = 0x00;
+		gw_client_list[net_id] = uid;
 		state = IDLE;
 		break;
 	case NODE:
@@ -164,9 +177,17 @@ void lorapcl_gateway_fsm()
 		break;
 	
 	case CHECK_FREE_NID:
-		// TODO: do a real checking
-		free_nid = 0x01;
-		state = SEND_SYNC_SET_ID;
+		free_nid = get_free_nid();
+		if (0x00 != free_nid) {
+			state = SEND_SYNC_SET_ID;
+		} else {
+			state = SEND_GW_FULL;
+		}
+		break;
+	
+	case SEND_GW_FULL:
+		send_signal(buffer.src_uid, buffer.src_nid, GW_FULL);
+		state = IDLE;
 		break;
 
 	case SEND_SYNC_SET_ID:
@@ -202,6 +223,7 @@ void lorapcl_gateway_fsm()
 	
 	case UPDATE_CLIENT_LIST:
 		// TODO: inform all also
+		gw_client_list[free_nid] = buffer.src_uid;
 		state = IDLE;
 		break;
 	}
@@ -295,6 +317,17 @@ static LoRa_Error_t wait_signal(Packet_Type_t signal)
 	}
 
 	return NO_RESPONSE;
+}
+
+static uint8_t get_free_nid()
+{
+	uint8_t nid, full = 0;
+
+	for(nid = 0; nid < 250; nid++) {
+		if (0x00 == gw_client_list[nid]) return nid;
+	}
+
+	return full;
 }
 
 static Packet_Type_t get_packet_type(Packet_Frame_t *packet)
