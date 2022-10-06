@@ -9,7 +9,9 @@
 	#define LORAPCL_TIMER_THLD 3000 // 3s
 #endif
 
+#define LORAPCL_HEADER_SIZE 6
 #define LORAPCL_MAX_DATA_SIZE 250 // 250 bytes
+#define LORAPCL_MAX_CLIENTS 250
 
 /* Protocol States */
 
@@ -35,7 +37,12 @@ typedef enum {
 	SYNC,
 	SYNC_SET_ID,
 	ACK,
-	GW_FULL
+	GW_FULL,
+	TRANS_BEGIN,
+	TRANS_BEGIN_ACK,
+	DATA,
+	PKG_ACK,
+	TRANS_END
 } Packet_Type_t;
 
 /* Protocol Frame Struct */
@@ -59,7 +66,7 @@ static uint8_t	       mode = NONE;
 // lot of memory
 static Packet_Frame_t  buffer;
 static Packet_Frame_t  data_packages[4];
-static uint8_t         gw_client_list[250];
+static uint8_t         gw_client_list[LORAPCL_MAX_CLIENTS];
 
 static const LoraInterface_t  *radio  = NULL;
 static const TimerInterface_t *mTimer = NULL;
@@ -72,6 +79,8 @@ static const SerialInterface_t *debug = NULL;
 static uint8_t        get_free_nid     ();
 static Packet_Type_t  get_packet_type  (Packet_Frame_t *packet);
 static LoRa_Error_t   wait_signal      (Packet_Type_t signal);
+static uint8_t check_uid_in_gateway_list(uint8_t uid);
+static uint8_t create_packages_from_data(const void *data, uint8_t size);
 
 static void send_signal(
 		uint8_t dest_uid,
@@ -297,7 +306,85 @@ LoRa_Error_t lorapcl_connect(uint8_t gateway_uid)
 	return NO_RESPONSE;
 }
 
+LoRa_Error_t lorapcl_send(uint8_t uid, const void *data, uint8_t size)
+{
+	uint8_t pkg_count, i, resend = 0;
+
+	// check if UID is in client list
+	uint8_t dest_nid = check_uid_in_gateway_list(uid);
+	if (0x00 == dest_nid) {
+		return NOT_A_CLIENT;
+	}
+
+	// create packages from Data
+	pkg_count = create_packages_from_data(data, size);
+
+	// send TRANS BEGIN
+	build_signal(unique_id, net_id, uid, dest_nid, TRANS_BEGIN);
+	buffer.data_size = pkg_count;
+	radio->packet_send(buffer.dest_nid, (uint8_t *)&buffer, LORAPCL_HEADER_SIZE);
+
+	// wait TRANS BEGIN ACK
+	if (NO_ERROR != wait_signal(TRANS_BEGIN_ACK)) {
+		return NO_RESPONSE;
+	}
+
+	// send packages
+	for (i = 0; i < pkg_count; i++) {
+		data_packages[i].src_uid = unique_id;
+		data_packages[i].src_nid = net_id;
+		data_packages[i].dest_uid = uid;
+		data_packages[i].dest_nid = dest_nid;
+		data_packages[i].flags_n_seq = ( ((DATA << 4)&0xF0) | ((i+1)&0x0F) );
+		radio->packet_send(
+				data_packages[i].dest_nid,
+				(uint8_t *)&data_packages[i],
+				data_packages[i].data_size + LORAPCL_HEADER_SIZE
+				);
+	}
+
+	// wait packages ack
+WAIT_PKG_ACK:
+	if (NO_ERROR != wait_signal(PKG_ACK)) return NO_RESPONSE;
+
+	// check pkg ack
+	for(i = 0; i < pkg_count; i++) {
+		if(0x00 == buffer.data[i]) {
+			radio->packet_send(
+					data_packages[i].dest_nid,
+					(uint8_t *)&data_packages[i],
+					data_packages[i].data_size + LORAPCL_HEADER_SIZE
+					);
+			resend = 1;
+		}
+	}
+	if (resend) {
+		resend = 0;
+		goto WAIT_PKG_ACK;
+	}
+
+	// send TRANS END
+	send_signal(uid, dest_nid, TRANS_END);
+
+	return NO_ERROR;
+}
+
+
 /* private functions code */
+
+static uint8_t create_packages_from_data(const void *data, uint8_t size)
+{
+	uint8_t count, i = 0, pkg_count = 0;
+	for (count = 0; count < size; count++) {
+		data_packages[pkg_count].data[i++] = *((uint8_t *)data++);
+		data_packages[pkg_count].data_size = i;
+		if (i == LORAPCL_MAX_DATA_SIZE) {
+			pkg_count++;
+			i = 0;
+		}
+	}
+	return (pkg_count+1);
+}
 
 static LoRa_Error_t wait_signal(Packet_Type_t signal)
 {
@@ -322,12 +409,19 @@ static LoRa_Error_t wait_signal(Packet_Type_t signal)
 static uint8_t get_free_nid()
 {
 	uint8_t nid, full = 0;
-
-	for(nid = 0; nid < 250; nid++) {
+	for(nid = 0; nid < LORAPCL_MAX_CLIENTS; nid++) {
 		if (0x00 == gw_client_list[nid]) return nid;
 	}
-
 	return full;
+}
+
+static uint8_t check_uid_in_gateway_list(uint8_t uid)
+{
+	uint8_t nid, ret = 0;
+	for(nid = 0; nid < LORAPCL_MAX_CLIENTS; nid++){
+		if(uid == gw_client_list[nid]) return nid;
+	}
+	return ret;
 }
 
 static Packet_Type_t get_packet_type(Packet_Frame_t *packet)

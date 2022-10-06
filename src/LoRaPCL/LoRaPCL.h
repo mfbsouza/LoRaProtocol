@@ -23,6 +23,7 @@ typedef enum {
 	NO_RESPONSE,
 	GATEWAY_FULL,
 	NO_MODE_DEFINED,
+	NOT_A_CLIENT,
 	DENIED
 } LoRa_Error_t;
 
@@ -45,6 +46,7 @@ LoRa_Error_t lorapcl_init(
 
 LoRa_Error_t lorapcl_scan_gateway  (uint8_t *gateway_uid);
 LoRa_Error_t lorapcl_connect       (uint8_t gateway_uid);
+LoRa_Error_t lorapcl_send          (uint8_t uid, const void *data, uint8_t size);
 void         lorapcl_gateway_fsm   ();
 
 #ifdef __cplusplus
